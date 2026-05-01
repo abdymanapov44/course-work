@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LipGloss ERP — Учёт производства</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">✦</div>
+      <div>
+        <div class="brand-name">LipGloss</div>
+        <div class="brand-sub">ERP система</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">Справочники</div>
+      <a class="nav-item active" data-page="dashboard" href="#">
+        <span class="nav-icon">◈</span> Дашборд
+      </a>
+      <a class="nav-item" data-page="raw_materials" href="#">
+        <span class="nav-icon">◉</span> Сырьё
+      </a>
+      <a class="nav-item" data-page="products" href="#">
+        <span class="nav-icon">◈</span> Готовая продукция
+      </a>
+      <a class="nav-item" data-page="units" href="#">
+        <span class="nav-icon">◌</span> Единицы измерения
+      </a>
+      <a class="nav-item" data-page="positions" href="#">
+        <span class="nav-icon">◌</span> Должности
+      </a>
+      <a class="nav-item" data-page="employees" href="#">
+        <span class="nav-icon">◉</span> Сотрудники
+      </a>
+      <a class="nav-item" data-page="ingredients" href="#">
+        <span class="nav-icon">◌</span> Ингредиенты
+      </a>
+
+      <div class="nav-group-label">Операции</div>
+      <a class="nav-item" data-page="budget" href="#">
+        <span class="nav-icon">◈</span> Бюджет
+      </a>
+      <a class="nav-item" data-page="purchases" href="#">
+        <span class="nav-icon">◉</span> Закупка сырья
+      </a>
+      <a class="nav-item" data-page="production" href="#">
+        <span class="nav-icon">◉</span> Производство
+      </a>
+      <a class="nav-item" data-page="sales" href="#">
+        <span class="nav-icon">◉</span> Продажа
+      </a>
+
+      <div class="nav-group-label">Отчёты</div>
+      <a class="nav-item" data-page="report_purchases" href="#">
+        <span class="nav-icon">◌</span> Отчёт закупок
+      </a>
+      <a class="nav-item" data-page="report_sales" href="#">
+        <span class="nav-icon">◌</span> Отчёт продаж
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="budget-widget">
+        <div class="budget-label">Текущий бюджет</div>
+        <div class="budget-value" id="sidebar-budget">загрузка...</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div id="page-container"></div>
+  </main>
+
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Заголовок</h3>
+        <button class="modal-close" id="modal-close">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/pages/dashboard.js"></script>
+  <script src="js/pages/raw_materials.js"></script>
+  <script src="js/pages/products.js"></script>
+  <script src="js/pages/units.js"></script>
+  <script src="js/pages/positions.js"></script>
+  <script src="js/pages/employees.js"></script>
+  <script src="js/pages/ingredients.js"></script>
+  <script src="js/pages/budget.js"></script>
+  <script src="js/pages/purchases.js"></script>
+  <script src="js/pages/production.js"></script>
+  <script src="js/pages/sales.js"></script>
+  <script src="js/pages/reports.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
