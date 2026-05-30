@@ -6,53 +6,34 @@ const { asyncWrap }    = require('../middleware/error');
 // GET /api/purchases
 router.get('/', asyncWrap(async (req, res) => {
   const pool = await getPool();
-  const r = await pool.request()
-    .query(`SELECT p.*, m.name AS material_name, e.full_name AS employee_name
-            FROM purchases p
-            JOIN raw_materials m ON m.id = p.material_id
-            JOIN employees     e ON e.id = p.employee_id
-            ORDER BY p.date DESC, p.id DESC`);
+  const r = await pool.request().execute('sp_purchases_list');
   res.json(r.recordset);
 }));
 
-// POST /api/purchases — вызов хранимой процедуры sp_check_and_purchase
+// POST /api/purchases
 router.post('/', asyncWrap(async (req, res) => {
   const { material_id, quantity, amount, date, employee_id } = req.body;
 
   if (!material_id || !quantity || !amount || !date || !employee_id)
     return res.status(400).json({ message: 'Все поля обязательны' });
 
-  const pool    = await getPool();
-  const request = pool.request();
-
-  // Входные параметры
-  request.input('amount',      sql.Float,  parseFloat(amount));
-  request.input('material_id', sql.Int,    parseInt(material_id));
-  request.input('quantity',    sql.Float,  parseFloat(quantity));
-  request.input('date',        sql.Date,   new Date(date));
-  request.input('employee_id', sql.Int,    parseInt(employee_id));
-
-  // Выходной параметр: 0 = OK, 1 = недостаточно средств
-  request.output('result', sql.Int);
+  const pool = await getPool();
+  const request = pool.request()
+    .input('amount',      sql.Float, parseFloat(amount))
+    .input('material_id', sql.Int,   parseInt(material_id))
+    .input('quantity',    sql.Float, parseFloat(quantity))
+    .input('date',        sql.Date,  new Date(date))
+    .input('employee_id', sql.Int,   parseInt(employee_id))
+    .output('result',     sql.Int)
+    .output('message',    sql.NVarChar(1000));
 
   const r = await request.execute('sp_check_and_purchase');
-  const result = r.output.result;
 
-  if (result === 1) {
-    return res.status(400).json({
-      message: 'Недостаточно средств в бюджете для данной закупки'
-    });
+  if (r.output.result !== 0) {
+    return res.status(400).json({ message: r.output.message });
   }
 
-  // Вернём последнюю добавленную запись
-  const last = await pool.request()
-    .query(`SELECT TOP 1 p.*, m.name AS material_name, e.full_name AS employee_name
-            FROM purchases p
-            JOIN raw_materials m ON m.id = p.material_id
-            JOIN employees     e ON e.id = p.employee_id
-            ORDER BY p.id DESC`);
-
-  res.status(201).json(last.recordset[0]);
+  res.status(201).json(r.recordset[0]);
 }));
 
 // DELETE /api/purchases/:id
@@ -60,7 +41,7 @@ router.delete('/:id', asyncWrap(async (req, res) => {
   const pool = await getPool();
   await pool.request()
     .input('id', sql.Int, req.params.id)
-    .query('DELETE FROM purchases WHERE id=@id');
+    .execute('sp_purchases_delete');
   res.json({ message: 'Удалено' });
 }));
 

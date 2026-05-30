@@ -58,7 +58,7 @@ function budgetEdit(current) {
     title: 'Установить бюджет',
     body: `<form id="budget-form">
       <div class="form-group">
-        <label>Сумма бюджета (₸)</label>
+        <label>Сумма бюджета (сом)</label>
         <input type="number" name="amount" value="${current}" min="0" step="0.01" required />
         <div class="form-hint">Введите начальную сумму финансовых средств предприятия</div>
       </div>

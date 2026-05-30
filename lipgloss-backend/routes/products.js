@@ -5,8 +5,7 @@ const { asyncWrap }    = require('../middleware/error');
 
 router.get('/', asyncWrap(async (req, res) => {
   const pool = await getPool();
-  const r = await pool.request()
-    .query('SELECT * FROM products ORDER BY id');
+  const r = await pool.request().execute('sp_products_list');
   res.json(r.recordset);
 }));
 
@@ -19,9 +18,7 @@ router.post('/', asyncWrap(async (req, res) => {
     .input('unit_id',  sql.Int,           unit_id)
     .input('quantity', sql.Float,         quantity)
     .input('amount',   sql.Float,         amount)
-    .query(`INSERT INTO products (name, unit_id, quantity, amount)
-            OUTPUT INSERTED.*
-            VALUES (@name, @unit_id, @quantity, @amount)`);
+    .execute('sp_products_create');
   res.status(201).json(r.recordset[0]);
 }));
 
@@ -34,10 +31,7 @@ router.put('/:id', asyncWrap(async (req, res) => {
     .input('unit_id',  sql.Int,           unit_id)
     .input('quantity', sql.Float,         quantity)
     .input('amount',   sql.Float,         amount)
-    .query(`UPDATE products
-            SET name=@name, unit_id=@unit_id, quantity=@quantity, amount=@amount
-            OUTPUT INSERTED.*
-            WHERE id=@id`);
+    .execute('sp_products_update');
   if (!r.recordset.length) return res.status(404).json({ message: 'Не найдено' });
   res.json(r.recordset[0]);
 }));
@@ -46,7 +40,7 @@ router.delete('/:id', asyncWrap(async (req, res) => {
   const pool = await getPool();
   await pool.request()
     .input('id', sql.Int, req.params.id)
-    .query('DELETE FROM products WHERE id=@id');
+    .execute('sp_products_delete');
   res.json({ message: 'Удалено' });
 }));
 

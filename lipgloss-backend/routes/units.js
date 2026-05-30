@@ -5,8 +5,8 @@ const { asyncWrap }    = require('../middleware/error');
 
 // GET /api/units
 router.get('/', asyncWrap(async (req, res) => {
-  const pool   = await getPool();
-  const result = await pool.request().query('SELECT * FROM units ORDER BY id');
+  const pool = await getPool();
+  const result = await pool.request().execute('sp_units_list');
   res.json(result.recordset);
 }));
 
@@ -14,10 +14,10 @@ router.get('/', asyncWrap(async (req, res) => {
 router.post('/', asyncWrap(async (req, res) => {
   const { name } = req.body;
   if (!name) { return res.status(400).json({ message: 'name обязателен' }); }
-  const pool   = await getPool();
+  const pool = await getPool();
   const result = await pool.request()
     .input('name', sql.NVarChar(50), name)
-    .query('INSERT INTO units (name) OUTPUT INSERTED.* VALUES (@name)');
+    .execute('sp_units_create');
   res.status(201).json(result.recordset[0]);
 }));
 
@@ -28,7 +28,7 @@ router.put('/:id', asyncWrap(async (req, res) => {
   const result = await pool.request()
     .input('id',   sql.Int,          req.params.id)
     .input('name', sql.NVarChar(50), name)
-    .query('UPDATE units SET name=@name OUTPUT INSERTED.* WHERE id=@id');
+    .execute('sp_units_update');
   if (!result.recordset.length) return res.status(404).json({ message: 'Не найдено' });
   res.json(result.recordset[0]);
 }));
@@ -38,7 +38,7 @@ router.delete('/:id', asyncWrap(async (req, res) => {
   const pool = await getPool();
   await pool.request()
     .input('id', sql.Int, req.params.id)
-    .query('DELETE FROM units WHERE id=@id');
+    .execute('sp_units_delete');
   res.json({ message: 'Удалено' });
 }));
 

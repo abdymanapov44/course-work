@@ -53,7 +53,7 @@ async function rawMaterialsCreate() {
           <input type="number" name="quantity" value="0" min="0" step="0.001" required />
         </div>
         <div class="form-group">
-          <label>Сумма (₸)</label>
+          <label>Сумма (сом)</label>
           <input type="number" name="amount" value="0" min="0" step="0.01" required />
         </div>
       </div>
@@ -85,7 +85,7 @@ async function rawMaterialsEdit(id) {
           <input type="number" name="quantity" value="${item.quantity}" min="0" step="0.001" required />
         </div>
         <div class="form-group">
-          <label>Сумма (₸)</label>
+          <label>Сумма (сом)</label>
           <input type="number" name="amount" value="${item.amount}" min="0" step="0.01" required />
         </div>
       </div>

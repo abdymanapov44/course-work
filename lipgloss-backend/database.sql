@@ -147,36 +147,84 @@ CREATE TABLE sales (
 GO
 
 -- ============================================================
---  ХРАНИМАЯ ПРОЦЕДУРА: sp_check_and_purchase
---  Входной параметр:  @amount  FLOAT  — сумма закупки
---  Выходной параметр: @result  INT    — 0 = бюджета хватает, 1 = не хватает
+--  ПРЕДСТАВЛЕНИЯ ДЛЯ ЧТЕНИЯ ДАННЫХ
 -- ============================================================
-CREATE OR ALTER PROCEDURE sp_check_and_purchase
-    @amount      FLOAT,
-    @material_id INT,
-    @quantity    FLOAT,
-    @date        DATE,
-    @employee_id INT,
-    @result      INT OUTPUT
-AS
-BEGIN
-    SET NOCOUNT ON;
+CREATE OR ALTER VIEW v_units AS
+    SELECT id, name
+    FROM units;
+GO
 
-    DECLARE @current_budget FLOAT;
-    SELECT TOP 1 @current_budget = amount FROM budget ORDER BY id;
+CREATE OR ALTER VIEW v_positions AS
+    SELECT id, title
+    FROM positions;
+GO
 
-    IF @current_budget IS NULL OR @current_budget < @amount
-    BEGIN
-        SET @result = 1;   -- недостаточно средств
-        RETURN;
-    END
+CREATE OR ALTER VIEW v_raw_materials AS
+    SELECT id, name, unit_id, quantity, amount
+    FROM raw_materials;
+GO
 
-    -- Бюджет достаточен — вставляем запись (триггер сработает автоматически)
-    INSERT INTO purchases (material_id, quantity, amount, date, employee_id)
-    VALUES (@material_id, @quantity, @amount, @date, @employee_id);
+CREATE OR ALTER VIEW v_products AS
+    SELECT id, name, unit_id, quantity, amount
+    FROM products;
+GO
 
-    SET @result = 0;   -- успех
-END;
+CREATE OR ALTER VIEW v_employees AS
+    SELECT id, full_name, position_id, salary, address, phone
+    FROM employees;
+GO
+
+CREATE OR ALTER VIEW v_ingredients AS
+    SELECT i.id,
+           i.product_id,
+           i.material_id,
+           i.quantity,
+           p.name AS product_name,
+           m.name AS material_name
+    FROM ingredients i
+    JOIN products      p ON p.id = i.product_id
+    JOIN raw_materials m ON m.id = i.material_id;
+GO
+
+CREATE OR ALTER VIEW v_purchases AS
+    SELECT p.id,
+           p.material_id,
+           p.quantity,
+           p.amount,
+           p.date,
+           p.employee_id,
+           m.name AS material_name,
+           e.full_name AS employee_name
+    FROM purchases p
+    JOIN raw_materials m ON m.id = p.material_id
+    JOIN employees     e ON e.id = p.employee_id;
+GO
+
+CREATE OR ALTER VIEW v_production AS
+    SELECT pr.id,
+           pr.product_id,
+           pr.quantity,
+           pr.date,
+           pr.employee_id,
+           p.name AS product_name,
+           e.full_name AS employee_name
+    FROM production pr
+    JOIN products  p ON p.id = pr.product_id
+    JOIN employees e ON e.id = pr.employee_id;
+GO
+
+CREATE OR ALTER VIEW v_sales AS
+    SELECT s.id,
+           s.product_id,
+           s.quantity,
+           s.amount,
+           s.date,
+           s.employee_id,
+           p.name AS product_name,
+           e.full_name AS employee_name
+    FROM sales s
+    JOIN products  p ON p.id = s.product_id
+    JOIN employees e ON e.id = s.employee_id;
 GO
 
 -- ============================================================
@@ -285,6 +333,545 @@ BEGIN
     SET amount = amount + i.amount
     FROM inserted i
     WHERE budget.id = (SELECT TOP 1 id FROM budget ORDER BY id);
+END;
+GO
+
+-- ============================================================
+--  ХРАНИМЫЕ ПРОЦЕДУРЫ ДЛЯ API
+-- ============================================================
+CREATE OR ALTER PROCEDURE sp_units_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_units ORDER BY id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_units_create
+    @name NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO units (name)
+    OUTPUT INSERTED.*
+    VALUES (@name);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_units_update
+    @id INT,
+    @name NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE units
+    SET name = @name
+    OUTPUT INSERTED.*
+    WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_units_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM units WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_positions_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_positions ORDER BY id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_positions_create
+    @title NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO positions (title)
+    OUTPUT INSERTED.*
+    VALUES (@title);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_positions_update
+    @id INT,
+    @title NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE positions
+    SET title = @title
+    OUTPUT INSERTED.*
+    WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_positions_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM positions WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_raw_materials_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_raw_materials ORDER BY id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_raw_materials_create
+    @name NVARCHAR(150),
+    @unit_id INT,
+    @quantity FLOAT,
+    @amount FLOAT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO raw_materials (name, unit_id, quantity, amount)
+    OUTPUT INSERTED.*
+    VALUES (@name, @unit_id, @quantity, @amount);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_raw_materials_update
+    @id INT,
+    @name NVARCHAR(150),
+    @unit_id INT,
+    @quantity FLOAT,
+    @amount FLOAT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE raw_materials
+    SET name = @name,
+        unit_id = @unit_id,
+        quantity = @quantity,
+        amount = @amount
+    OUTPUT INSERTED.*
+    WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_raw_materials_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM raw_materials WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_products_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_products ORDER BY id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_products_create
+    @name NVARCHAR(150),
+    @unit_id INT,
+    @quantity FLOAT,
+    @amount FLOAT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO products (name, unit_id, quantity, amount)
+    OUTPUT INSERTED.*
+    VALUES (@name, @unit_id, @quantity, @amount);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_products_update
+    @id INT,
+    @name NVARCHAR(150),
+    @unit_id INT,
+    @quantity FLOAT,
+    @amount FLOAT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE products
+    SET name = @name,
+        unit_id = @unit_id,
+        quantity = @quantity,
+        amount = @amount
+    OUTPUT INSERTED.*
+    WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_products_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM products WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_employees_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_employees ORDER BY id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_employees_create
+    @full_name NVARCHAR(200),
+    @position_id INT,
+    @salary FLOAT,
+    @address NVARCHAR(255),
+    @phone NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO employees (full_name, position_id, salary, address, phone)
+    OUTPUT INSERTED.*
+    VALUES (@full_name, @position_id, @salary, @address, @phone);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_employees_update
+    @id INT,
+    @full_name NVARCHAR(200),
+    @position_id INT,
+    @salary FLOAT,
+    @address NVARCHAR(255),
+    @phone NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE employees
+    SET full_name = @full_name,
+        position_id = @position_id,
+        salary = @salary,
+        address = @address,
+        phone = @phone
+    OUTPUT INSERTED.*
+    WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_employees_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM employees WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_ingredients_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_ingredients ORDER BY product_id, id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_ingredients_by_product
+    @pid INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT id, product_id, material_id, quantity, material_name
+    FROM v_ingredients
+    WHERE product_id = @pid
+    ORDER BY id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_ingredients_create
+    @product_id INT,
+    @material_id INT,
+    @quantity FLOAT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO ingredients (product_id, material_id, quantity)
+    OUTPUT INSERTED.*
+    VALUES (@product_id, @material_id, @quantity);
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_ingredients_update
+    @id INT,
+    @product_id INT,
+    @material_id INT,
+    @quantity FLOAT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE ingredients
+    SET product_id = @product_id,
+        material_id = @material_id,
+        quantity = @quantity
+    OUTPUT INSERTED.*
+    WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_ingredients_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM ingredients WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_budget_get AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP 1 *
+    FROM budget
+    ORDER BY id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_budget_set
+    @amount FLOAT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @id INT;
+    SELECT TOP 1 @id = id FROM budget ORDER BY id;
+
+    IF @id IS NULL
+    BEGIN
+        INSERT INTO budget (amount)
+        OUTPUT INSERTED.*
+        VALUES (@amount);
+        RETURN;
+    END
+
+    UPDATE budget
+    SET amount = @amount
+    OUTPUT INSERTED.*
+    WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_purchases_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_purchases ORDER BY date DESC, id DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_check_and_purchase
+    @amount      FLOAT,
+    @material_id INT,
+    @quantity    FLOAT,
+    @date        DATE,
+    @employee_id INT,
+    @result      INT OUTPUT,
+    @message     NVARCHAR(1000) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @current_budget FLOAT;
+    DECLARE @id INT;
+
+    SELECT TOP 1 @current_budget = amount FROM budget ORDER BY id;
+
+    IF @current_budget IS NULL OR @current_budget < @amount
+    BEGIN
+        SET @result = 1;
+        SET @message = N'Недостаточно средств в бюджете для данной закупки';
+        RETURN;
+    END
+
+    INSERT INTO purchases (material_id, quantity, amount, date, employee_id)
+    VALUES (@material_id, @quantity, @amount, @date, @employee_id);
+
+    SET @id = SCOPE_IDENTITY();
+    SET @result = 0;
+    SET @message = N'OK';
+
+    SELECT *
+    FROM v_purchases
+    WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_purchases_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM purchases WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_production_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_production ORDER BY date DESC, id DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_production_create
+    @product_id INT,
+    @quantity FLOAT,
+    @date DATE,
+    @employee_id INT,
+    @result INT OUTPUT,
+    @message NVARCHAR(1000) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @id INT;
+
+    IF NOT EXISTS (SELECT 1 FROM ingredients WHERE product_id = @product_id)
+    BEGIN
+        SET @result = 1;
+        SET @message = N'У данной продукции не заданы ингредиенты';
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM ingredients ing
+        JOIN raw_materials m ON m.id = ing.material_id
+        WHERE ing.product_id = @product_id
+          AND m.quantity < ing.quantity * @quantity
+    )
+    BEGIN
+        SELECT @message = N'Недостаточно сырья: ' + STRING_AGG(
+            CONCAT(name, N': нужно ', CONVERT(NVARCHAR(50), CAST(needed AS DECIMAL(18,3))),
+                   N', есть ', CONVERT(NVARCHAR(50), CAST(stock AS DECIMAL(18,3)))),
+            N'; '
+        )
+        FROM (
+            SELECT m.name,
+                   m.quantity AS stock,
+                   ing.quantity * @quantity AS needed
+            FROM ingredients ing
+            JOIN raw_materials m ON m.id = ing.material_id
+            WHERE ing.product_id = @product_id
+              AND m.quantity < ing.quantity * @quantity
+        ) shortage;
+
+        SET @result = 2;
+        RETURN;
+    END
+
+    INSERT INTO production (product_id, quantity, date, employee_id)
+    VALUES (@product_id, @quantity, @date, @employee_id);
+
+    SET @id = SCOPE_IDENTITY();
+    SET @result = 0;
+    SET @message = N'OK';
+
+    SELECT * FROM v_production WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_production_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM production WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_sales_list AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM v_sales ORDER BY date DESC, id DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_sales_create
+    @product_id INT,
+    @quantity FLOAT,
+    @amount FLOAT,
+    @date DATE,
+    @employee_id INT,
+    @result INT OUTPUT,
+    @message NVARCHAR(1000) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @id INT;
+    DECLARE @stock FLOAT;
+
+    SELECT @stock = quantity
+    FROM products
+    WHERE id = @product_id;
+
+    IF @stock IS NULL
+    BEGIN
+        SET @result = 1;
+        SET @message = N'Продукция не найдена';
+        RETURN;
+    END
+
+    IF @stock < @quantity
+    BEGIN
+        SET @result = 2;
+        SET @message = CONCAT(N'Недостаточно продукции на складе. Есть: ', @stock, N', нужно: ', @quantity);
+        RETURN;
+    END
+
+    INSERT INTO sales (product_id, quantity, amount, date, employee_id)
+    VALUES (@product_id, @quantity, @amount, @date, @employee_id);
+
+    SET @id = SCOPE_IDENTITY();
+    SET @result = 0;
+    SET @message = N'OK';
+
+    SELECT * FROM v_sales WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_sales_delete
+    @id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM sales WHERE id = @id;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_reports_purchases
+    @from DATE = NULL,
+    @to DATE = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT *
+    FROM v_purchases
+    WHERE (@from IS NULL OR date >= @from)
+      AND (@to IS NULL OR date <= @to)
+    ORDER BY date DESC, id DESC;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_reports_sales
+    @from DATE = NULL,
+    @to DATE = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT *
+    FROM v_sales
+    WHERE (@from IS NULL OR date >= @from)
+      AND (@to IS NULL OR date <= @to)
+    ORDER BY date DESC, id DESC;
 END;
 GO
 

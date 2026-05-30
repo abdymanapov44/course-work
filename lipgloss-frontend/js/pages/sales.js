@@ -75,7 +75,7 @@ async function salesCreate() {
           <input type="number" name="quantity" placeholder="50" min="0.001" step="0.001" required />
         </div>
         <div class="form-group">
-          <label>Сумма продажи (₸)</label>
+          <label>Сумма продажи (сом)</label>
           <input type="number" name="amount" placeholder="75000" min="0.01" step="0.01" required />
           <div class="form-hint">Должна быть выше себестоимости</div>
         </div>

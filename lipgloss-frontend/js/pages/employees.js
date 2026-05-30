@@ -50,7 +50,7 @@ async function employeesCreate() {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Оклад (₸)</label>
+          <label>Оклад (сом)</label>
           <input type="number" name="salary" placeholder="150000" min="0" step="0.01" required />
         </div>
         <div class="form-group">
@@ -86,7 +86,7 @@ async function employeesEdit(id) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Оклад (₸)</label>
+          <label>Оклад (сом)</label>
           <input type="number" name="salary" value="${item.salary}" min="0" step="0.01" required />
         </div>
         <div class="form-group">

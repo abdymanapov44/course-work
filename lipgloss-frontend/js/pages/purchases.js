@@ -55,7 +55,7 @@ async function purchasesCreate() {
     title: 'Закупка сырья',
     body: `
       <div class="alert alert-warning" style="margin-bottom:16px">
-        <span>₸</span> Доступный бюджет: <b>${fmt.money(budgetData.amount)}</b>
+        <span>сом</span> Доступный бюджет: <b>${fmt.money(budgetData.amount)}</b>
       </div>
       <form id="purchase-form">
         <div class="form-group">
@@ -68,7 +68,7 @@ async function purchasesCreate() {
             <input type="number" name="quantity" placeholder="10.000" min="0.001" step="0.001" required />
           </div>
           <div class="form-group">
-            <label>Сумма (₸)</label>
+            <label>Сумма (сом)</label>
             <input type="number" name="amount" id="purchase-amount" placeholder="50000" min="0.01" step="0.01" required
               oninput="purchasesCheckBudget(this.value, ${budgetData.amount})" />
           </div>

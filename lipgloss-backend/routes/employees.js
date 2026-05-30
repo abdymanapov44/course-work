@@ -5,8 +5,7 @@ const { asyncWrap }    = require('../middleware/error');
 
 router.get('/', asyncWrap(async (req, res) => {
   const pool = await getPool();
-  const r = await pool.request()
-    .query('SELECT * FROM employees ORDER BY id');
+  const r = await pool.request().execute('sp_employees_list');
   res.json(r.recordset);
 }));
 
@@ -20,9 +19,7 @@ router.post('/', asyncWrap(async (req, res) => {
     .input('salary',      sql.Float,         salary)
     .input('address',     sql.NVarChar(255), address)
     .input('phone',       sql.NVarChar(50),  phone)
-    .query(`INSERT INTO employees (full_name, position_id, salary, address, phone)
-            OUTPUT INSERTED.*
-            VALUES (@full_name, @position_id, @salary, @address, @phone)`);
+    .execute('sp_employees_create');
   res.status(201).json(r.recordset[0]);
 }));
 
@@ -36,11 +33,7 @@ router.put('/:id', asyncWrap(async (req, res) => {
     .input('salary',      sql.Float,         salary)
     .input('address',     sql.NVarChar(255), address || '')
     .input('phone',       sql.NVarChar(50),  phone   || '')
-    .query(`UPDATE employees
-            SET full_name=@full_name, position_id=@position_id, salary=@salary,
-                address=@address, phone=@phone
-            OUTPUT INSERTED.*
-            WHERE id=@id`);
+    .execute('sp_employees_update');
   if (!r.recordset.length) return res.status(404).json({ message: 'Не найдено' });
   res.json(r.recordset[0]);
 }));
@@ -49,7 +42,7 @@ router.delete('/:id', asyncWrap(async (req, res) => {
   const pool = await getPool();
   await pool.request()
     .input('id', sql.Int, req.params.id)
-    .query('DELETE FROM employees WHERE id=@id');
+    .execute('sp_employees_delete');
   res.json({ message: 'Удалено' });
 }));
 
